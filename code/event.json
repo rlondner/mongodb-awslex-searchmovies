@@ -1,0 +1,20 @@
+{
+  "messageVersion": "1.0",
+  "invocationSource": "FulfillmentCodeHook",
+  "userId": "user-1",
+  "sessionAttributes": {},
+  "bot": {
+    "name": "SearchMoviesBot",
+    "alias": "$LATEST",
+    "version": "$LATEST"
+  },
+  "outputDialogMode": "Text",
+  "currentIntent": {
+    "name": "SearchMovies",
+    "slots": {
+      "castMember": "brad pitt",
+      "year": "0",
+      "genre": "All"
+    }
+  }
+}

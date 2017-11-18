@@ -1,0 +1,58 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+    {
+            "Sid": "Stmt1510957883000",
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:*"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+    {
+            "Sid": "Stmt1510958138000",
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetRole",
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:AttachRolePolicy"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+    {
+            "Sid": "Stmt1510958231000",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+    {
+            "Sid": "Stmt1510958323000",
+            "Effect": "Allow",
+            "Action": [
+                "iam:DetachRolePolicy"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "Stmt1510959423000",
+            "Effect": "Allow",
+            "Action": [
+                "apigateway:*"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
