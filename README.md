@@ -51,4 +51,6 @@ This is the Lambda function used by our Lex chatbot to fulfill the intent and re
     - 0
 1. You should get the following answer from the bot, coming right from your MongoDB Atlas database:
 
-          Angelina Jolie played in the following comedy movies: Hackers (1995), Mojave Moon (1996), Playing by Heart (1998), Pushing Tin (1999), Life or Something Like It (2002), Mr. & Mrs. Smith (2005)
+````text
+Angelina Jolie played in the following comedy movies: Hackers (1995), Mojave Moon (1996), Playing by Heart (1998), Pushing Tin (1999), Life or Something Like It (2002), Mr. & Mrs. Smith (2005)
+````

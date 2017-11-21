@@ -1,5 +1,5 @@
 "use strict";
-var os = require('os');
+var os = require("os");
 var MongoClient = require("mongodb").MongoClient;
 var uri = "mongodb://localhost:27017/IMDB";
 var moviesCollection = "movies";
@@ -73,81 +73,157 @@ function dispatch(context, intentRequest, callback) {
 function query(db, intentRequest, callback) {
   const sessionAttributes = intentRequest.sessionAttributes;
   const slots = intentRequest.currentIntent.slots;
-  const actor = slots.castMember;
+  const castMember = slots.castMember;
   const genre = slots.genre;
   var year = parseInt(slots.year.replace(/[^0-9]/g, ""), 10);
-  console.log(`Searching for ${genre} movies with ${actor} in ${year}`);
+  console.log(`Searching for ${genre} movies with ${castMember} in ${year}`);
 
-  var actorMovies = "";
-  var msgGenre = undefined;
+  var castMemberMovies = "";
+  var msgGenre = allGenres;
   var msgYear = undefined;
+  var castArray = [castMember]
+  //var castArray = [castMember, "Angelina Jolie"]
 
-  var query = {
-    Cast: { $in: [actor] },
+  var matchQuery = {
+    Cast: { $in: castArray },
     Genres: { $not: { $in: ["Documentary", "News", ""] } },
     Type: "movie"
   };
 
   if (genre != undefined && genre != allGenres) {
-    query.Genres = { $in: [genre] };
+    matchQuery.Genres = { $in: [genre] };
     msgGenre = genre.toLowerCase();
   }
 
   if ((year != undefined && isNaN(year)) || year > 1895) {
-    query.Year = year;
+    matchQuery.Year = year;
     msgYear = year;
   }
 
-  console.log(`query is ${JSON.stringify(query)}`);
+  console.log(`query is ${JSON.stringify(matchQuery)}`);
 
   var resMessage = undefined;
   if (msgGenre == undefined && msgYear == undefined) {
-    resMessage = `Sorry, I couldn't find any movie for ${actor}.`;
+    resMessage = `Sorry, I couldn't find any movie for ${castMember}.`;
   }
   if (msgGenre != undefined && msgYear == undefined) {
-    resMessage = `Sorry, I couldn't find any ${msgGenre} movie for ${actor}.`;
+    resMessage = `Sorry, I couldn't find any ${msgGenre} movie for ${castMember}.`;
   }
   if (msgGenre == undefined && msgYear != undefined) {
-    resMessage = `Sorry, I couldn't find any movie for ${actor} in ${msgYear}.`;
+    resMessage = `Sorry, I couldn't find any movie for ${castMember} in ${msgYear}.`;
   }
   if (msgGenre != undefined && msgYear != undefined) {
-    resMessage = `Sorry, ${actor} played in no ${msgGenre} movie in ${msgYear}.`;
+    resMessage = `Sorry, ${castMember} starred in no ${msgGenre} movie in ${msgYear}.`;
   }
 
-  db
-    .collection(moviesCollection)
-    .find(query, { _id: 0, Title: 1, Year: 1 })
-    .collation({locale:'en', strength:1})//cf. https://docs.mongodb.com/manual/reference/collation
-    .sort({ Year: 1 })
-    .toArray(function(err, results) {
-      if (err) {
-        console.log(`Error querying the db: ${err}.`, err);
-        process.exit(1);
-      }
-      if (results.length > 0) {
-        for (var i = 0, len = results.length; i < len; i++) {
-          actorMovies += `${results[i].Title} (${results[i].Year}), ${os.EOL}`;
+  var aggregationFramework = true;
+  var unwindStage = { $unwind: "$Cast"}
+  var castFilterStage = { $match: {Cast: { $in: castArray } } }
+  var collation = { locale: "en", strength: 1 };
+
+  var moviesCount = 0;
+  var yearSpan = 0;
+
+  var cursor;
+
+  if (aggregationFramework) {
+    cursor = db.collection(moviesCollection).aggregate(
+      [
+        { $match: matchQuery },
+        { $sort: { Year: 1 } },
+        unwindStage,
+        castFilterStage,
+        { $group: {
+            _id: "$Cast",
+            allMoviesArray: {$push: {$concat: ["$Title", " (", { $substr: ["$Year", 0, 4] }, ")"] } },
+            moviesCount: { $sum: 1 },
+            maxYear: { $max: "$Year" },
+            minYear: { $min: "$Year" }
+          }
+        },
+        {
+          $project: {
+            moviesCount: 1,
+            timeSpan: { $subtract: ["$maxYear", "$minYear"] },
+            allMovies: {
+              $reduce: {
+                input: "$allMoviesArray",
+                initialValue: "",
+                in: {
+                  $concat: [
+                    "$$value",
+                    {
+                      $cond: {
+                        if: { $eq: ["$$value", ""] },
+                        then: "",
+                        else: ", "
+                      }
+                    },
+                    "$$this"
+                  ]
+                }
+              }
+            }
+          }
         }
+      ],
+      {collation: collation} // cf. https://docs.mongodb.com/manual/reference/method/db.collection.aggregate/#specify-a-collation
+    );
+  } else {
+    cursor = db
+      .collection(moviesCollection)
+      .find(matchQuery, { _id: 0, Title: 1, Year: 1 })
+      .collation(collation) //cf. https://docs.mongodb.com/manual/reference/method/db.collection.find/#specify-collation
+      .sort({ Year: 1 });
+  }
+
+  cursor.toArray(function(err, results) {
+    if (err) {
+      console.log(`Error querying the db: ${err}.`, err);
+      process.exit(1);
+    }
+    if (results.length > 0) {
+      console.log(`Raw results: ${JSON.stringify(results)}`)
+      if (aggregationFramework) {
+        for (var i = 0, len = results.length; i < len; i++) { 
+          castMemberMovies = results[i].allMovies;
+          moviesCount = results[i].moviesCount;
+          yearSpan = results[i].timeSpan;
+        }
+      } 
+      else {
+        moviesCount = results.length;
+        var maxYear, minYear;
+        for (var i = 0, len = results.length; i < len; i++) { 
+          castMemberMovies += `${results[i].Title} (${results[i].Year}), `;//${os.EOL}`;
+        }
+        var minYear, maxYear;
+        minYear = results[0].Year
+        maxYear = results[results.length-1].Year
+        yearSpan = maxYear - minYear
         //removing the last comma and space
-        actorMovies = actorMovies.substring(0, actorMovies.length - 3);
-        if (msgGenre != undefined) {
-          resMessage = `${toTitleCase(actor)} played in the following ${msgGenre.toLowerCase()} movies: ${actorMovies}`;
-        } else {
-          resMessage = `${toTitleCase(actor)} played in the following movies: ${actorMovies}`;
-        }
-        if (msgYear != undefined) {
-          resMessage = `In ${msgYear}, ` + resMessage;
-        }
+        castMemberMovies = castMemberMovies.substring(0, castMemberMovies.length - 2);
       }
-      console.log(`${toTitleCase(actor)}'s ${msgGenre.toLowerCase()} movies are ${actorMovies}`);
-      //db.close();
-      callback(
-        close(sessionAttributes, "Fulfilled", {
-          contentType: "PlainText",
-          content: resMessage
-        })
-      );
-    });
+
+      if (msgGenre != allGenres) {
+        resMessage = `${toTitleCase(castMember)} starred in the following ${moviesCount>1?moviesCount+" ":""}${msgGenre.toLowerCase()} movie(s)${yearSpan>0?" over " + yearSpan +" years":""}: ${castMemberMovies}`;
+      } else {
+        resMessage = `${toTitleCase(castMember)} starred in the following ${moviesCount>1?moviesCount+" ":""}movie(s)${yearSpan>0?" over " + yearSpan +" years":""}: ${castMemberMovies}`;
+      }
+      if (msgYear != undefined) {
+        resMessage = `In ${msgYear}, ` + resMessage;
+      }
+    }
+
+    console.log(`Response message: ${resMessage}`)
+    //db.close();
+    callback(
+      close(sessionAttributes, "Fulfilled", {
+        contentType: "PlainText",
+        content: resMessage
+      })
+    );
+  });
 }
 
 function toTitleCase(str) {
