@@ -34,20 +34,12 @@ exports.handler = (event, context, callback) => {
 
 function dispatch(context, intentRequest, callback) {
   const sessionAttributes = intentRequest.sessionAttributes;
-  const slots = intentRequest.currentIntent.slots;
-  const slotDetails = intentRequest.currentIntent.slotDetails;
-  const actor = slots.castMember;
-  const genre = slots.genre;
+  var slots = intentRequest.currentIntent.slots;
   var jsonSlots = JSON.stringify(slots);
-  var jsonSlotDetails = JSON.stringify(slotDetails);
 
-  console.log(
-    `request received for userId=${intentRequest.userId}, intentName=${intentRequest
-      .currentIntent
-      .name} with slots=${jsonSlots} and slotDetails=${jsonSlotDetails}`
-  );
+  console.log(`request received for userId=${intentRequest.userId}, intentName=${intentRequest.currentIntent.name} with slots=${jsonSlots}`);
 
-  if (genre != undefined && actor != undefined) {
+  if (slots.genre != undefined && slots.castMember != undefined) {
     context.callbackWaitsForEmptyEventLoop = false;
     var mongoDBUri = process.env["MONGODB_URI"];
     try {
@@ -57,7 +49,7 @@ function dispatch(context, intentRequest, callback) {
       } else {
         //some performance penalty might be incurred when running that database connection initialization code
         //console.log(`=> connecting to database ${mongoDBUri}`);
-        MongoClient.connect(mongoDBUri, function(err, db) {
+        MongoClient.connect(mongoDBUri, (err, db) => {
           if (err) {
             console.log(`the error is ${err}.`, err);
             process.exit(1);
