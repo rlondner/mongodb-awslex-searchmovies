@@ -6,27 +6,29 @@ var moviesCollection = "movies";
 const allGenres = "All";
 let cachedDb = null;
 
-// Close dialog with the bot user, reporting fulfillmentState of Failed or Fulfilled ("In 2005, Angeline Jolie played in Mr. and Mrs. Smith")
-function close(sessionAttributes, fulfillmentState, message) {
-  return {
-    sessionAttributes,
-    dialogAction: {
-      type: "Close",
-      fulfillmentState,
-      message
-    }
-  };
-}
+// --------------- Main handler -----------------------
 
-function delegate(sessionAttributes, slots) {
-  return {
-    sessionAttributes,
-    dialogAction: {
-      type: "Delegate",
-      slots
+// Route the incoming request based on intent.
+// The JSON body of the request is provided in the event slot.
+exports.handler = (event, context, callback) => {
+  try {
+    if (event.bot.name !== "SearchMoviesBot") {
+      callback("Invalid Bot Name");
+      process.exit(1);
     }
-  };
-}
+    var jsonContents = JSON.parse(JSON.stringify(event));
+    //handling API Gateway input where the event is embedded into the 'body' element
+    if (event.body !== null && event.body !== undefined) {
+      console.log("retrieving payload from event.body");
+      jsonContents = JSON.parse(event.body);
+    }
+    dispatch(context, jsonContents, response => {
+      callback(null, response);
+    });
+  } catch (err) {
+    callback(err);
+  }
+};
 
 // --------------- Events -----------------------
 
@@ -232,26 +234,25 @@ function toTitleCase(str) {
   });
 }
 
-// --------------- Main handler -----------------------
+// Close dialog with the bot user, reporting fulfillmentState of Failed or Fulfilled ("In 2005, Angeline Jolie played in Mr. and Mrs. Smith")
+function close(sessionAttributes, fulfillmentState, message) {
+  return {
+    sessionAttributes,
+    dialogAction: {
+      type: "Close",
+      fulfillmentState,
+      message
+    }
+  };
+}
 
-// Route the incoming request based on intent.
-// The JSON body of the request is provided in the event slot.
-exports.handler = (event, context, callback) => {
-  try {
-    if (event.bot.name !== "SearchMoviesBot") {
-      callback("Invalid Bot Name");
-      process.exit(1);
+function delegate(sessionAttributes, slots) {
+  return {
+    sessionAttributes,
+    dialogAction: {
+      type: "Delegate",
+      slots
     }
-    var jsonContents = JSON.parse(JSON.stringify(event));
-    //handling API Gateway input where the event is embedded into the 'body' element
-    if (event.body !== null && event.body !== undefined) {
-      console.log("retrieving payload from event.body");
-      jsonContents = JSON.parse(event.body);
-    }
-    dispatch(context, jsonContents, response => {
-      callback(null, response);
-    });
-  } catch (err) {
-    callback(err);
-  }
-};
+  };
+}
+
