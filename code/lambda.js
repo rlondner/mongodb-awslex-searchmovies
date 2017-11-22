@@ -33,7 +33,6 @@ exports.handler = (event, context, callback) => {
 // --------------- Events -----------------------
 
 function dispatch(context, intentRequest, callback) {
-  const sessionAttributes = intentRequest.sessionAttributes;
   var slots = intentRequest.currentIntent.slots;
   var jsonSlots = JSON.stringify(slots);
 
@@ -75,8 +74,8 @@ function query(db, intentRequest, callback) {
   var castMemberMovies = "";
   var msgGenre = allGenres;
   var msgYear = undefined;
-  var castArray = [castMember]
-  //var castArray = [castMember, "Angelina Jolie"]
+  var castArray = [castMember];
+  castArray = [castMember, "Angelina Jolie"]
 
   var matchQuery = {
     Cast: { $in: castArray },
@@ -131,8 +130,8 @@ function query(db, intentRequest, callback) {
             _id: "$Cast",
             allMoviesArray: {$push: {$concat: ["$Title", " (", { $substr: ["$Year", 0, 4] }, ")"] } },
             moviesCount: { $sum: 1 },
-            maxYear: { $max: "$Year" },
-            minYear: { $min: "$Year" }
+            maxYear: { $last: "$Year" },
+            minYear: { $first: "$Year" }
           }
         },
         {
@@ -164,8 +163,7 @@ function query(db, intentRequest, callback) {
       {collation: collation} // cf. https://docs.mongodb.com/manual/reference/method/db.collection.aggregate/#specify-a-collation
     );
   } else {
-    cursor = db
-      .collection(moviesCollection)
+    cursor = db.collection(moviesCollection)
       .find(matchQuery, { _id: 0, Title: 1, Year: 1 })
       .collation(collation) //cf. https://docs.mongodb.com/manual/reference/method/db.collection.find/#specify-collation
       .sort({ Year: 1 });
@@ -191,12 +189,13 @@ function query(db, intentRequest, callback) {
         for (var i = 0, len = results.length; i < len; i++) { 
           castMemberMovies += `${results[i].Title} (${results[i].Year}), `;//${os.EOL}`;
         }
-        var minYear, maxYear;
-        minYear = results[0].Year
-        maxYear = results[results.length-1].Year
-        yearSpan = maxYear - minYear
         //removing the last comma and space
         castMemberMovies = castMemberMovies.substring(0, castMemberMovies.length - 2);
+
+        var minYear, maxYear;
+        minYear = results[0].Year;
+        maxYear = results[results.length-1].Year;
+        yearSpan = maxYear - minYear;   
       }
 
       if (msgGenre != allGenres) {
