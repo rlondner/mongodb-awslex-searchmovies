@@ -38,9 +38,9 @@ function dispatch(context, intentRequest, callback) {
 
   console.log(`request received for userId=${intentRequest.userId}, intentName=${intentRequest.currentIntent.name} with slots=${jsonSlots}`);
 
-  if (slots.genre != undefined && slots.castMember != undefined) {
+  if (slots.genre !== undefined && slots.castMember !== undefined) {
     context.callbackWaitsForEmptyEventLoop = false;
-    var mongoDBUri = process.env["MONGODB_URI"];
+    var mongoDBUri = process.env['MONGODB_URI'];
     try {
       //testing if the database connection exists and is connected to Atlas so we can try to re-use it
       if (cachedDb && cachedDb.serverConfig.isConnected()) {
@@ -73,9 +73,9 @@ function query(db, intentRequest, callback) {
 
   var castMemberMovies = "";
   var msgGenre = allGenres;
-  var msgYear = undefined;
+  var msgYear;
   var castArray = [castMember];
-  castArray = [castMember, "Angelina Jolie"]
+  //castArray = [castMember, "Angelina Jolie"];
 
   var matchQuery = {
     Cast: { $in: castArray },
@@ -83,35 +83,35 @@ function query(db, intentRequest, callback) {
     Type: "movie"
   };
 
-  if (genre != undefined && genre != allGenres) {
+  if (genre !== undefined && genre !== allGenres) {
     matchQuery.Genres = { $in: [genre] };
     msgGenre = genre.toLowerCase();
   }
 
-  if ((year != undefined && isNaN(year)) || year > 1895) {
+  if ((year !== undefined && isNaN(year)) || year > 1895) {
     matchQuery.Year = year;
     msgYear = year;
   }
 
   console.log(`query is ${JSON.stringify(matchQuery)}`);
 
-  var resMessage = undefined;
-  if (msgGenre == undefined && msgYear == undefined) {
+  var resMessage;
+  if (msgGenre === undefined && msgYear === undefined) {
     resMessage = `Sorry, I couldn't find any movie for ${castMember}.`;
   }
-  if (msgGenre != undefined && msgYear == undefined) {
+  if (msgGenre !== undefined && msgYear === undefined) {
     resMessage = `Sorry, I couldn't find any ${msgGenre} movie for ${castMember}.`;
   }
-  if (msgGenre == undefined && msgYear != undefined) {
+  if (msgGenre === undefined && msgYear !== undefined) {
     resMessage = `Sorry, I couldn't find any movie for ${castMember} in ${msgYear}.`;
   }
-  if (msgGenre != undefined && msgYear != undefined) {
+  if (msgGenre !== undefined && msgYear !== undefined) {
     resMessage = `Sorry, ${castMember} starred in no ${msgGenre} movie in ${msgYear}.`;
   }
 
   var aggregationFramework = true;
-  var unwindStage = { $unwind: "$Cast"}
-  var castFilterStage = { $match: {Cast: { $in: castArray } } }
+  var unwindStage = { $unwind: "$Cast"};
+  var castFilterStage = { $match: {Cast: { $in: castArray } } };
   var collation = { locale: "en", strength: 1 };
 
   var moviesCount = 0;
@@ -175,7 +175,7 @@ function query(db, intentRequest, callback) {
       process.exit(1);
     }
     if (results.length > 0) {
-      console.log(`Raw results: ${JSON.stringify(results)}`)
+      console.log(`Raw results: ${JSON.stringify(results)}`);
       if (aggregationFramework) {
         for (var i = 0, len = results.length; i < len; i++) { 
           castMemberMovies = results[i].allMovies;
@@ -184,14 +184,12 @@ function query(db, intentRequest, callback) {
         }
       } 
       else {
-        moviesCount = results.length;
-        var maxYear, minYear;
         for (var i = 0, len = results.length; i < len; i++) { 
           castMemberMovies += `${results[i].Title} (${results[i].Year}), `;//${os.EOL}`;
         }
         //removing the last comma and space
         castMemberMovies = castMemberMovies.substring(0, castMemberMovies.length - 2);
-
+        moviesCount = results.length;
         var minYear, maxYear;
         minYear = results[0].Year;
         maxYear = results[results.length-1].Year;
@@ -203,12 +201,12 @@ function query(db, intentRequest, callback) {
       } else {
         resMessage = `${toTitleCase(castMember)} starred in the following ${moviesCount>1?moviesCount+" ":""}movie(s)${yearSpan>0?" over " + yearSpan +" years":""}: ${castMemberMovies}`;
       }
-      if (msgYear != undefined) {
+      if (msgYear !== undefined) {
         resMessage = `In ${msgYear}, ` + resMessage;
       }
     }
 
-    console.log(`Response message: ${resMessage}`)
+    console.log(`Response message: ${resMessage}`);
     //db.close();
     callback(
       close(sessionAttributes, "Fulfilled", {
