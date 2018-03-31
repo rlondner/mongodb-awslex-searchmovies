@@ -5,3 +5,5 @@ code/_sam-invoke.sh
 code/_sam-package.sh
 code/_template.yaml
 code/node_modules
+code/package-lock.json
+package-lock.json

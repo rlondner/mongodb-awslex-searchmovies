@@ -48,12 +48,12 @@ function dispatch(context, intentRequest, callback) {
       } else {
         //some performance penalty might be incurred when running that database connection initialization code
         //console.log(`=> connecting to database ${mongoDBUri}`);
-        MongoClient.connect(mongoDBUri, (err, db) => {
+        MongoClient.connect(mongoDBUri, (err, client) => {
           if (err) {
             console.log(`the error is ${err}.`, err);
             process.exit(1);
           }
-          cachedDb = db;
+          cachedDb = client.db('moviesDB');
           return query(cachedDb, intentRequest, callback);
         });
       }

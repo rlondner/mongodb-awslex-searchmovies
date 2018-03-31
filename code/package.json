@@ -1,7 +1,7 @@
 {
   "name": "mongodb-awslex-searchmovies",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "A Lambda function used by AWS Lex to query a movie database hosted in MongoDB Atlas",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "mongodb": "^2.2.33"
+    "mongodb": "^3.0.5"
   }
 }
